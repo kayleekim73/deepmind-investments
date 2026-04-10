@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google DeepMind Investment Intelligence</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafaf8;color:#1a1a18;padding:2rem;line-height:1.5}
+  h1{font-size:1.5rem;font-weight:600;margin-bottom:0.25rem;color:#1a1a18}
+  .subtitle{font-size:0.8rem;color:#888;margin-bottom:1.5rem}
+  .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
+  .metric{background:#fff;border:0.5px solid #e0dfd8;border-radius:8px;padding:1rem}
+  .metric-label{font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
+  .metric-value{font-size:1.5rem;font-weight:600}
+  .filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #e8e7e0}
+  .filter-group{display:flex;align-items:center;gap:6px}
+  .filter-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em}
+  select{background:#fff;border:1px solid #ddd;color:#1a1a18;padding:4px 8px;font-size:12px;border-radius:4px;cursor:pointer}
+  .count-note{font-size:12px;color:#aaa;margin-left:auto}
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:0.07em;padding:8px 12px 8px 0;border-bottom:1px solid #e8e7e0}
+  tbody tr.data-row{border-bottom:1px solid #f0efe8;cursor:pointer;transition:background 0.1s}
+  tbody tr.data-row:hover,tbody tr.data-row.open{background:#f5f4f0}
+  td{font-size:13px;padding:11px 12px 11px 0;vertical-align:middle}
+  .co-name{font-weight:500}
+  .muted{color:#888}
+  .badge{display:inline-block;font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px}
+  .b-red{background:#FCEBEB;color:#791F1F}
+  .b-amber{background:#FAEEDA;color:#633806}
+  .b-blue{background:#E6F1FB;color:#0C447C}
+  .b-gray{background:#f0efe8;color:#555}
+  .chevron{display:inline-block;font-size:9px;color:#bbb;transition:transform 0.15s;margin-right:4px}
+  .chevron.open{transform:rotate(90deg)}
+  .drawer-row td{padding:0 0 12px 0}
+  .drawer{background:#fff;border:0.5px solid #e0dfd8;border-radius:8px;padding:1.25rem}
+  .drawer-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1rem}
+  .ds-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+  .ds-item{font-size:13px;color:#333;margin-bottom:3px}
+  .rationale-bar{border-left:2px solid #e0dfd8;padding-left:12px}
+  .rationale-text{font-size:13px;color:#555;line-height:1.65}
+  .conf-high{color:#3B6D11}
+  .conf-med{color:#BA7517}
+  .conf-low{color:#999}
+  .data-note{font-size:11px;color:#bbb;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #f0efe8}
+  @media(max-width:640px){.metric-grid{grid-template-columns:1fr 1fr}.drawer-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>Google DeepMind — Investment Intelligence</h1>
+<p class="subtitle">Web-sourced deal inventory · AI-classified by strategic/financial rubric · Click any row for rationale</p>
+
+<div class="metric-grid" id="metrics"></div>
+
+<div class="filters">
+  <div class="filter-group">
+    <span class="filter-label">Classification</span>
+    <select id="f-cls" onchange="applyFilters()">
+      <option>All</option>
+      <option>Clearly Strategic</option>
+      <option>Likely Strategic</option>
+      <option>Likely Financial</option>
+      <option>Unclear</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Sector</span>
+    <select id="f-sector" onchange="applyFilters()"></select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Stage</span>
+    <select id="f-stage" onchange="applyFilters()"></select>
+  </div>
+  <span class="count-note" id="count-note"></span>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:16px"></th>
+      <th>Company</th>
+      <th>Sector</th>
+      <th>Stage</th>
+      <th>Date</th>
+      <th>Round size</th>
+      <th>DM lead?</th>
+      <th>Classification</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<p class="data-note">Data sourced from web search (Tracxn, PitchBook public preview, TechCrunch, company press releases) as of April 2026. PitchBook lists 14 total investments + acquisitions — connect PitchBook MCP to unlock the full dataset and enrich round sizes and lead status. Classifications applied using a fixed rubric: Clearly Strategic (formal partnership / acquisition / board seat), Likely Strategic (corporate co-investors or Google-adjacent vertical), Likely Financial (VC-led, no partnership), Unclear (insufficient data).</p>
+
+<script>
+const DEALS=[
+  {
+    company:"Apptronik",sector:"Robotics",hq:"USA",stage:"Series A",date:"2025-02",
+    sizeFmt:"$350M+",size:350,isLead:false,
+    coInvestors:["B Capital (co-lead)","Capital Factory (co-lead)","Mercedes-Benz","PEAK6","AT&T Ventures","John Deere","QIA"],
+    cls:"Clearly Strategic",conf:"High",
+    rationale:"Google DeepMind announced a formal strategic partnership in December 2024 to integrate Gemini 2.0 models directly into Apptronik's Apollo humanoid robot — one of the most concrete signals of strategic intent possible. DeepMind is not the financial lead (B Capital and Capital Factory co-led), but the commercial AI model integration makes this unambiguously strategic. The robotics vertical is also directly adjacent to DeepMind's own Gemini Robotics program launched in March 2025, suggesting this investment serves as both market access and a real-world deployment platform for DeepMind models."
+  },
+  {
+    company:"LogicStar",sector:"AI Infrastructure",hq:"Switzerland",stage:"Pre-Seed",date:"2025-02",
+    sizeFmt:"$3M",size:3,isLead:false,
+    coInvestors:["Northzone (lead)","Sequoia scouts (angel)","Snyk angels","Spotify angels","Fleet"],
+    cls:"Likely Financial",conf:"Medium",
+    rationale:"The round was led by Northzone, a traditional financial VC, and DeepMind's involvement was at the angel level — individual employees participating, not an institutional check. The co-investor mix is dominated by financial VCs and individual angels rather than corporate strategics. While the AI code-agent vertical is loosely adjacent to Google's infrastructure interests, there is no announced commercial partnership and the deal pattern looks more like DeepMind talent-network deal flow (the founders are ex-ETH Zurich AI researchers) than a deliberate strategic deployment of capital."
+  },
+  {
+    company:"AllScale",sector:"AI Infrastructure",hq:"Unknown",stage:"Seed",date:"2025-12",
+    sizeFmt:"Undisclosed",size:null,isLead:null,
+    coInvestors:["Unknown"],
+    cls:"Unclear",conf:"Low",
+    rationale:"PitchBook confirms a Seed round closed December 8, 2025, but no further deal details have been publicly disclosed. Round size, co-investors, HQ, and any partnership context are unavailable. Cannot classify confidently — recommend a direct PitchBook pull via the MCP connector or founder outreach to surface co-investor composition and any commercial tie-ins."
+  },
+  {
+    company:"NOMA",sector:"AI Security",hq:"Israel",stage:"Unknown",date:"2024",
+    sizeFmt:"Undisclosed",size:null,isLead:null,
+    coInvestors:["Unknown"],
+    cls:"Likely Strategic",conf:"Medium",
+    rationale:"NOMA (Noma Security) focuses on securing and governing agentic AI systems — a directly Google-adjacent vertical given DeepMind's role building Gemini agents and the Alphabet enterprise AI platform. AI security and governance tooling is a category where Google has clear strategic motivation to build ecosystem coverage, particularly as regulatory scrutiny of AI systems intensifies. No formal partnership has been publicly announced, which prevents a 'Clearly Strategic' rating, but the vertical alignment is strong."
+  },
+  {
+    company:"Tandem Health",sector:"Health AI",hq:"USA",stage:"Unknown",date:"2024",
+    sizeFmt:"Undisclosed",size:null,isLead:null,
+    coInvestors:["Unknown"],
+    cls:"Likely Strategic",conf:"Medium",
+    rationale:"Health AI is one of DeepMind's most historically significant research areas (AlphaFold, AlphaMissense, DeepMind Health) and is explicitly one of the 'Likely Strategic' rubric verticals. DeepMind has both deep research credibility and commercial motivation to build relationships in clinical AI. The lack of a disclosed commercial partnership and unknown co-investor profile prevent a 'Clearly Strategic' classification — once PitchBook is connected, checking for board seat or partnership announcements would resolve this."
+  },
+  {
+    company:"Maisa",sector:"AI-Native",hq:"Sweden",stage:"Unknown",date:"2024",
+    sizeFmt:"Undisclosed",size:null,isLead:null,
+    coInvestors:["Unknown"],
+    cls:"Unclear",conf:"Low",
+    rationale:"Very limited public information available. Maisa operates in the AI-Native category and is headquartered in Sweden, but round details, co-investors, and any partnership context are not publicly disclosed. The 'AI-Native' sector descriptor is too broad to infer strategic vs. financial intent — it could refer to anything from AI agents to model infrastructure. Recommend a PitchBook deep-dive once the connector is active; this is likely the highest-value 'Unclear' to resolve."
+  }
+];
+
+const badgeClass={
+  "Clearly Strategic":"badge b-red",
+  "Likely Strategic":"badge b-amber",
+  "Likely Financial":"badge b-blue",
+  "Unclear":"badge b-gray"
+};
+const confCls={High:"conf-high",Medium:"conf-med",Low:"conf-low"};
+
+let openIdx=null;
+let filtered=[...DEALS];
+
+function buildSelect(id,vals){
+  const el=document.getElementById(id);
+  const prev=el.value;
+  while(el.options.length>1)el.remove(1);
+  vals.forEach(v=>{const o=document.createElement("option");o.value=o.text=v;el.appendChild(o);});
+  if([...el.options].some(o=>o.value===prev))el.value=prev;
+}
+
+function applyFilters(){
+  const cls=document.getElementById("f-cls").value;
+  const sec=document.getElementById("f-sector").value;
+  const stg=document.getElementById("f-stage").value;
+  filtered=DEALS.filter(d=>{
+    if(cls!=="All"&&d.cls!==cls)return false;
+    if(sec!=="All"&&d.sector!==sec)return false;
+    if(stg!=="All"&&d.stage!==stg)return false;
+    return true;
+  });
+  openIdx=null;
+  render();
+}
+
+function toggle(i){openIdx=openIdx===i?null:i;render();}
+
+function render(){
+  const tb=document.getElementById("tbody");
+  tb.innerHTML="";
+  document.getElementById("count-note").textContent=filtered.length+" of "+DEALS.length+" deals";
+
+  filtered.forEach((d,i)=>{
+    const open=openIdx===i;
+    const tr=document.createElement("tr");
+    tr.className="data-row"+(open?" open":"");
+    tr.innerHTML=`
+      <td style="padding-right:0"><span class="chevron${open?" open":""}">&#9654;</span></td>
+      <td class="co-name">${d.company}</td>
+      <td class="muted">${d.sector}</td>
+      <td class="muted">${d.stage}</td>
+      <td class="muted">${d.date}</td>
+      <td>${d.sizeFmt}</td>
+      <td class="muted">${d.isLead===null?"—":d.isLead?"Yes":"No"}</td>
+      <td><span class="${badgeClass[d.cls]}">${d.cls}</span></td>
+    `;
+    tr.onclick=()=>toggle(i);
+    tb.appendChild(tr);
+
+    if(open){
+      const dr=document.createElement("tr");
+      dr.className="drawer-row";
+      const td=document.createElement("td");
+      td.colSpan=8;
+      td.innerHTML=`
+        <div class="drawer">
+          <div class="drawer-grid">
+            <div>
+              <div class="ds-label">Round details</div>
+              <div class="ds-item">Size: ${d.sizeFmt}</div>
+              <div class="ds-item">Stage: ${d.stage}</div>
+              <div class="ds-item">HQ: ${d.hq}</div>
+              <div class="ds-item">DM lead: ${d.isLead===null?"Unknown":d.isLead?"Yes":"No"}</div>
+            </div>
+            <div>
+              <div class="ds-label">Co-investors</div>
+              ${d.coInvestors.map(c=>`<div class="ds-item">· ${c}</div>`).join("")}
+            </div>
+            <div>
+              <div class="ds-label">Classification</div>
+              <div style="margin-bottom:8px"><span class="${badgeClass[d.cls]}">${d.cls}</span></div>
+              <div class="ds-item">Confidence: <span class="${confCls[d.conf]}">${d.conf}</span></div>
+            </div>
+          </div>
+          <div class="ds-label" style="margin-bottom:8px">Rationale</div>
+          <div class="rationale-bar"><p class="rationale-text">${d.rationale}</p></div>
+        </div>
+      `;
+      dr.appendChild(td);
+      tb.appendChild(dr);
+    }
+  });
+
+  const cs=DEALS.filter(d=>d.cls==="Clearly Strategic").length;
+  const ls=DEALS.filter(d=>d.cls==="Likely Strategic").length;
+  const disclosed=DEALS.filter(d=>d.size);
+  const avg=disclosed.length?Math.round(disclosed.reduce((a,b)=>a+b.size,0)/disclosed.length):0;
+  document.getElementById("metrics").innerHTML=`
+    <div class="metric"><div class="metric-label">Total tracked</div><div class="metric-value">${DEALS.length}</div></div>
+    <div class="metric"><div class="metric-label">Clearly strategic</div><div class="metric-value" style="color:#791F1F">${cs}</div></div>
+    <div class="metric"><div class="metric-label">Likely strategic</div><div class="metric-value" style="color:#633806">${ls}</div></div>
+    <div class="metric"><div class="metric-label">Avg disclosed size</div><div class="metric-value">$${avg}M</div></div>
+  `;
+}
+
+buildSelect("f-sector",["All",...new Set(DEALS.map(d=>d.sector))].filter((v,i,a)=>i===0||a.indexOf(v)===i).slice(1).sort());
+buildSelect("f-stage",["All",...new Set(DEALS.map(d=>d.stage))].filter((v,i,a)=>i===0||a.indexOf(v)===i).slice(1).sort());
+render();
+</script>
+</body>
+</html>
