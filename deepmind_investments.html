@@ -7,19 +7,22 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafaf8;color:#1a1a18;padding:2rem;line-height:1.5}
-  h1{font-size:1.5rem;font-weight:600;margin-bottom:0.25rem;color:#1a1a18}
+  h1{font-size:1.5rem;font-weight:600;margin-bottom:0.25rem}
   .subtitle{font-size:0.8rem;color:#888;margin-bottom:1.5rem}
-  .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem}
+  .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem}
   .metric{background:#fff;border:0.5px solid #e0dfd8;border-radius:8px;padding:1rem}
   .metric-label{font-size:11px;color:#888;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em}
   .metric-value{font-size:1.5rem;font-weight:600}
-  .filters{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #e8e7e0}
-  .filter-group{display:flex;align-items:center;gap:6px}
-  .filter-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.05em}
-  select{background:#fff;border:1px solid #ddd;color:#1a1a18;padding:4px 8px;font-size:12px;border-radius:4px;cursor:pointer}
-  .count-note{font-size:12px;color:#aaa;margin-left:auto}
-  table{width:100%;border-collapse:collapse}
-  thead th{text-align:left;font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:0.07em;padding:8px 12px 8px 0;border-bottom:1px solid #e8e7e0}
+  .insight-box{background:#FAEEDA;border-left:3px solid #BA7517;border-radius:0 6px 6px 0;padding:0.75rem 1rem;margin-bottom:1.5rem;font-size:12px;color:#633806;line-height:1.6}
+  table{width:100%;border-collapse:collapse;margin-top:0.5rem}
+  thead th{text-align:left;font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:0.07em;padding:8px 12px 8px 0;border-bottom:1px solid #e8e7e0;white-space:nowrap}
+  th.filterable{cursor:pointer;user-select:none}
+  th.filterable:hover .th-inner{color:#555}
+  .th-inner{display:inline-flex;align-items:center;gap:5px}
+  .th-inner .th-label{color:inherit}
+  .filter-pip{display:inline-flex;align-items:center;gap:3px;background:#1a1a18;color:#fff;font-size:10px;padding:1px 5px 1px 6px;border-radius:3px;font-weight:500;letter-spacing:0.02em;white-space:nowrap}
+  .filter-pip .pip-x{opacity:0.6;font-size:9px;cursor:pointer;line-height:1}
+  .filter-pip .pip-x:hover{opacity:1}
   tbody tr.data-row{border-bottom:1px solid #f0efe8;cursor:pointer;transition:background 0.1s}
   tbody tr.data-row:hover,tbody tr.data-row.open{background:#f5f4f0}
   td{font-size:13px;padding:11px 12px 11px 0;vertical-align:middle}
@@ -39,9 +42,11 @@
   .ds-item{font-size:13px;color:#333;margin-bottom:3px}
   .rationale-bar{border-left:2px solid #e0dfd8;padding-left:12px}
   .rationale-text{font-size:13px;color:#555;line-height:1.65}
-  .conf-high{color:#3B6D11}
-  .conf-med{color:#BA7517}
-  .conf-low{color:#999}
+  .conf-high{color:#3B6D11;font-weight:500}
+  .conf-med{color:#BA7517;font-weight:500}
+  .conf-low{color:#999;font-weight:500}
+  .dm-corp{font-size:11px;background:#E6F1FB;color:#0C447C;padding:2px 7px;border-radius:3px}
+  .dm-angel{font-size:11px;background:#f0efe8;color:#666;padding:2px 7px;border-radius:3px}
   .data-note{font-size:11px;color:#bbb;margin-top:1.5rem;padding-top:1rem;border-top:1px solid #f0efe8}
   @media(max-width:640px){.metric-grid{grid-template-columns:1fr 1fr}.drawer-grid{grid-template-columns:1fr}}
 </style>
@@ -49,93 +54,78 @@
 <body>
 
 <h1>Google DeepMind — Investment Intelligence</h1>
-<p class="subtitle">Web-sourced deal inventory · AI-classified by strategic/financial rubric · Click any row for rationale</p>
+<p class="subtitle">PitchBook-sourced deal inventory · AI-classified by strategic/financial rubric · Click any row for rationale · Click column headers to filter</p>
 
+<div class="insight-box" id="insight-box"></div>
 <div class="metric-grid" id="metrics"></div>
-
-<div class="filters">
-  <div class="filter-group">
-    <span class="filter-label">Classification</span>
-    <select id="f-cls" onchange="applyFilters()">
-      <option>All</option>
-      <option>Clearly Strategic</option>
-      <option>Likely Strategic</option>
-      <option>Likely Financial</option>
-      <option>Unclear</option>
-    </select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">Sector</span>
-    <select id="f-sector" onchange="applyFilters()"></select>
-  </div>
-  <div class="filter-group">
-    <span class="filter-label">Stage</span>
-    <select id="f-stage" onchange="applyFilters()"></select>
-  </div>
-  <span class="count-note" id="count-note"></span>
-</div>
 
 <table>
   <thead>
     <tr>
       <th style="width:16px"></th>
       <th>Company</th>
-      <th>Sector</th>
+      <th class="filterable" id="th-sector" onclick="cycleFilter('sector')"><span class="th-inner"><span class="th-label">Sector</span></span></th>
       <th>Stage</th>
       <th>Date</th>
       <th>Round size</th>
-      <th>DM lead?</th>
-      <th>Classification</th>
+      <th class="filterable" id="th-dmType" onclick="cycleFilter('dmType')"><span class="th-inner"><span class="th-label">DM type</span></span></th>
+      <th class="filterable" id="th-cls" onclick="cycleFilter('cls')"><span class="th-inner"><span class="th-label">Classification</span></span></th>
     </tr>
   </thead>
   <tbody id="tbody"></tbody>
 </table>
 
-<p class="data-note">Data sourced from web search (Tracxn, PitchBook public preview, TechCrunch, company press releases) as of April 2026. PitchBook lists 14 total investments + acquisitions — connect PitchBook MCP to unlock the full dataset and enrich round sizes and lead status. Classifications applied using a fixed rubric: Clearly Strategic (formal partnership / acquisition / board seat), Likely Strategic (corporate co-investors or Google-adjacent vertical), Likely Financial (VC-led, no partnership), Unclear (insufficient data).</p>
+<p class="data-note">Sources: PitchBook, company announcements, press coverage. PitchBook lists 14 total investments + acquisitions for Google DeepMind — this dashboard covers 6 confirmed minority investments. "DM type" distinguishes corporate Google DeepMind institutional checks from individual employee angel participation — a critical distinction for strategic vs. financial intent. Classifications: Clearly Strategic (formal partnership / acquisition / board seat), Likely Strategic (corporate check + Google-adjacent vertical), Likely Financial (VC-led, individual angel connection, no partnership), Unclear (insufficient data or atypical vertical).</p>
 
 <script>
 const DEALS=[
   {
-    company:"Apptronik",sector:"Robotics",hq:"USA",stage:"Series A",date:"2025-02",
-    sizeFmt:"$350M+",size:350,isLead:false,
+    company:"Apptronik",sector:"Robotics",hq:"Austin, TX — USA",stage:"Series A",date:"Feb 2025",
+    sizeFmt:"$350M+",size:350,dmType:"Corporate",
+    dmConnection:"Google DeepMind [Corporate] — non-lead investor",
     coInvestors:["B Capital (co-lead)","Capital Factory (co-lead)","Mercedes-Benz","PEAK6","AT&T Ventures","John Deere","QIA"],
     cls:"Clearly Strategic",conf:"High",
-    rationale:"Google DeepMind announced a formal strategic partnership in December 2024 to integrate Gemini 2.0 models directly into Apptronik's Apollo humanoid robot — one of the most concrete signals of strategic intent possible. DeepMind is not the financial lead (B Capital and Capital Factory co-led), but the commercial AI model integration makes this unambiguously strategic. The robotics vertical is also directly adjacent to DeepMind's own Gemini Robotics program launched in March 2025, suggesting this investment serves as both market access and a real-world deployment platform for DeepMind models."
+    rationale:"Google DeepMind made a corporate institutional investment alongside a formal strategic partnership announced in December 2024 to integrate Gemini 2.0 models directly into Apptronik's Apollo humanoid robot. This is the clearest possible strategic signal: a named corporate check plus a commercial AI model integration. DeepMind is not the financial lead (B Capital and Capital Factory co-led), but the Gemini 2.0 partnership means Apollo becomes a real-world deployment platform for DeepMind models. The robotics vertical is also directly adjacent to DeepMind's own Gemini Robotics research program launched March 2025, and the mix of co-investors — including corporates like Mercedes-Benz — reinforces the strategic framing."
   },
   {
-    company:"LogicStar",sector:"AI Infrastructure",hq:"Switzerland",stage:"Pre-Seed",date:"2025-02",
-    sizeFmt:"$3M",size:3,isLead:false,
+    company:"AllScale",sector:"Fintech / Crypto",hq:"Vancouver, BC — Canada",stage:"Seed",date:"Dec 2025",
+    sizeFmt:"$6.93M",size:6.93,dmType:"Corporate",
+    dmConnection:"Google DeepMind [Corporate] — non-lead investor",
+    coInvestors:["YZi Labs (lead)","Informed Ventures","Generative Ventures","Amber Group","Aptos Foundation","Astera Ventures","BlockBooster","Carry Investment","DFJ DragonFund China","Draper Dragon","INP Capital","KuCoin Ventures","Oak Grove Ventures","Summer Sun Capital","V3V Ventures","Y2Z Ventures"],
+    cls:"Unclear",conf:"Low",
+    rationale:"This is a confirmed corporate Google DeepMind check (not an individual angel), which is notable — but the strategic logic is opaque. AllScale builds stablecoin-powered cross-border payment settlement for SMBs, a fintech/crypto vertical that is not obviously adjacent to DeepMind's AI research, robotics, or health focus areas. The co-investor syndicate is dominated entirely by crypto-native VCs (YZi Labs, Amber Group, KuCoin Ventures, Draper Dragon, Aptos Foundation) with no other AI strategics present. Without a disclosed partnership or public rationale from DeepMind, this may reflect Alphabet-level treasury or ecosystem strategy rather than DeepMind-specific research or product intent — making it the hardest deal in the portfolio to classify."
+  },
+  {
+    company:"Tandem Health",sector:"Health AI",hq:"Stockholm — Sweden",stage:"Seed",date:"Jun 2024",
+    sizeFmt:"$9.5M",size:9.5,dmType:"Individual angel",
+    dmConnection:"DeepMind employee angels — unnamed individuals (not a corporate Google DeepMind check)",
+    coInvestors:["Northzone (co-lead)","Amino Collective (co-lead)","OpenAI operator angels","Capio Sverige founder (angel)"],
+    cls:"Likely Financial",conf:"High",
+    rationale:"Despite operating in health AI — historically one of DeepMind's most significant research verticals — the investment connection is individual DeepMind employee angels, not a corporate institutional check. The round was co-led by Northzone and Amino Collective, both traditional financial VCs. Notably, angels from OpenAI operators also participated alongside the DeepMind individuals, suggesting this is talent-network deal flow (top AI researchers backing promising founders) rather than deliberate strategic capital from Google DeepMind as an organization. No commercial partnership has been announced. The individual-angel-only connection with financial-VC-dominated co-investors firmly places this in the financial bucket."
+  },
+  {
+    company:"Noma Security",sector:"AI Security",hq:"Tel Aviv — Israel",stage:"Seed + Series A",date:"Oct 2024",
+    sizeFmt:"$32M ($7M seed + $25M Series A)",size:32,dmType:"Individual angel",
+    dmConnection:"Google DeepMind CISO — individual angel, name undisclosed (not a corporate check)",
+    coInvestors:["Glilot Capital Partners (seed lead)","Cyber Club London","Ballistic Ventures (Series A lead)","Evolution Equity Partners (drove total to $132M)"],
+    cls:"Likely Financial",conf:"High",
+    rationale:"The DeepMind connection is a single individual — the CISO acting as a personal angel — not a corporate Google DeepMind check. Both the seed and Series A were led by dedicated cybersecurity financial VCs (Glilot Capital Partners and Ballistic Ventures respectively), with no AI strategics in the syndicate. Evolution Equity Partners later drove the total to $132M. While the product — an end-to-end AI security and governance platform covering the full data-and-AI lifecycle — is relevant to Google's interests in AI safety, the individual-angel-only connection and financial-VC-dominated cap table classify this as personal deal flow from a well-networked executive, not a strategic corporate deployment. A corporate follow-on or formal partnership announcement would warrant reclassification."
+  },
+  {
+    company:"Maisa",sector:"AI Agents",hq:"Valencia, Spain + San Francisco, CA",stage:"Pre-Seed",date:"Dec 2024",
+    sizeFmt:"$5M pre-seed ($25M seed follow-on, Aug 2025)",size:5,dmType:"Individual angel",
+    dmConnection:"Lukas Haas — DeepMind PM, individual angel (not a corporate Google DeepMind check)",
+    coInvestors:["NFX (pre-seed co-lead)","Village Global (pre-seed co-lead)","Sequoia Scout Fund","Local angels","Creandum (seed lead, Aug 2025)","Forgepoint Capital","NFX (seed follow-on)","Village Global (seed follow-on)"],
+    cls:"Likely Financial",conf:"High",
+    rationale:"The DeepMind connection is a single named individual — Lukas Haas, a DeepMind PM — participating as a personal angel, not a corporate check. The pre-seed was co-led by NFX and Village Global, both traditional financial VCs, and the August 2025 seed follow-on was led by Creandum (a European financial VC). The agentic AI platform ('Vinci KPU,' targeting deterministic, traceable AI outputs) is broadly relevant to enterprise AI but not specifically tied to Google's product roadmap. The consistent financial-VC syndicate and individual-angel-only DeepMind connection classify this as talent-network deal flow from a well-networked PM, not a strategic corporate deployment."
+  },
+  {
+    company:"LogicStar",sector:"AI Infrastructure",hq:"Zurich — Switzerland",stage:"Pre-Seed",date:"Feb 2025",
+    sizeFmt:"$3M",size:3,dmType:"Individual angel",
+    dmConnection:"DeepMind employee angels — individual participation (not a corporate check)",
     coInvestors:["Northzone (lead)","Sequoia scouts (angel)","Snyk angels","Spotify angels","Fleet"],
     cls:"Likely Financial",conf:"Medium",
-    rationale:"The round was led by Northzone, a traditional financial VC, and DeepMind's involvement was at the angel level — individual employees participating, not an institutional check. The co-investor mix is dominated by financial VCs and individual angels rather than corporate strategics. While the AI code-agent vertical is loosely adjacent to Google's infrastructure interests, there is no announced commercial partnership and the deal pattern looks more like DeepMind talent-network deal flow (the founders are ex-ETH Zurich AI researchers) than a deliberate strategic deployment of capital."
-  },
-  {
-    company:"AllScale",sector:"AI Infrastructure",hq:"Unknown",stage:"Seed",date:"2025-12",
-    sizeFmt:"Undisclosed",size:null,isLead:null,
-    coInvestors:["Unknown"],
-    cls:"Unclear",conf:"Low",
-    rationale:"PitchBook confirms a Seed round closed December 8, 2025, but no further deal details have been publicly disclosed. Round size, co-investors, HQ, and any partnership context are unavailable. Cannot classify confidently — recommend a direct PitchBook pull via the MCP connector or founder outreach to surface co-investor composition and any commercial tie-ins."
-  },
-  {
-    company:"NOMA",sector:"AI Security",hq:"Israel",stage:"Unknown",date:"2024",
-    sizeFmt:"Undisclosed",size:null,isLead:null,
-    coInvestors:["Unknown"],
-    cls:"Likely Strategic",conf:"Medium",
-    rationale:"NOMA (Noma Security) focuses on securing and governing agentic AI systems — a directly Google-adjacent vertical given DeepMind's role building Gemini agents and the Alphabet enterprise AI platform. AI security and governance tooling is a category where Google has clear strategic motivation to build ecosystem coverage, particularly as regulatory scrutiny of AI systems intensifies. No formal partnership has been publicly announced, which prevents a 'Clearly Strategic' rating, but the vertical alignment is strong."
-  },
-  {
-    company:"Tandem Health",sector:"Health AI",hq:"USA",stage:"Unknown",date:"2024",
-    sizeFmt:"Undisclosed",size:null,isLead:null,
-    coInvestors:["Unknown"],
-    cls:"Likely Strategic",conf:"Medium",
-    rationale:"Health AI is one of DeepMind's most historically significant research areas (AlphaFold, AlphaMissense, DeepMind Health) and is explicitly one of the 'Likely Strategic' rubric verticals. DeepMind has both deep research credibility and commercial motivation to build relationships in clinical AI. The lack of a disclosed commercial partnership and unknown co-investor profile prevent a 'Clearly Strategic' classification — once PitchBook is connected, checking for board seat or partnership announcements would resolve this."
-  },
-  {
-    company:"Maisa",sector:"AI-Native",hq:"Sweden",stage:"Unknown",date:"2024",
-    sizeFmt:"Undisclosed",size:null,isLead:null,
-    coInvestors:["Unknown"],
-    cls:"Unclear",conf:"Low",
-    rationale:"Very limited public information available. Maisa operates in the AI-Native category and is headquartered in Sweden, but round details, co-investors, and any partnership context are not publicly disclosed. The 'AI-Native' sector descriptor is too broad to infer strategic vs. financial intent — it could refer to anything from AI agents to model infrastructure. Recommend a PitchBook deep-dive once the connector is active; this is likely the highest-value 'Unclear' to resolve."
+    rationale:"The round was led by Northzone (a traditional financial VC) and DeepMind's involvement was at the individual angel level — employees participating personally, not an institutional check. The broader co-investor mix is dominated by financial VCs and individual angels. The founders come from ETH Zurich and previously built DeepCode.ai (acquired by Snyk, now Snyk Code), suggesting this is talent-network deal flow — DeepMind researchers backing technically credible AI infrastructure founders from the same research community. No commercial partnership with Google has been announced. Confidence is Medium rather than High because the AI code-agent vertical is loosely adjacent to Google's developer tools interests, leaving open a small possibility of a future strategic relationship."
   }
 ];
 
@@ -147,40 +137,73 @@ const badgeClass={
 };
 const confCls={High:"conf-high",Medium:"conf-med",Low:"conf-low"};
 
-let openIdx=null;
-let filtered=[...DEALS];
+// Filter state: null = no filter active
+const activeFilters={sector:null,dmType:null,cls:null};
+// Unique values per filterable column
+const colValues={
+  sector:[...new Set(DEALS.map(d=>d.sector))],
+  dmType:[...new Set(DEALS.map(d=>d.dmType))],
+  cls:[...new Set(DEALS.map(d=>d.cls))]
+};
 
-function buildSelect(id,vals){
-  const el=document.getElementById(id);
-  const prev=el.value;
-  while(el.options.length>1)el.remove(1);
-  vals.forEach(v=>{const o=document.createElement("option");o.value=o.text=v;el.appendChild(o);});
-  if([...el.options].some(o=>o.value===prev))el.value=prev;
+let openIdx=null;
+
+function cycleFilter(col,e){
+  if(e) e.stopPropagation();
+  const vals=colValues[col];
+  const cur=activeFilters[col];
+  const curIdx=vals.indexOf(cur);
+  // cycle: null → val[0] → val[1] → ... → null
+  activeFilters[col]=curIdx===-1?vals[0]:(curIdx===vals.length-1?null:vals[curIdx+1]);
+  openIdx=null;
+  renderHeaders();
+  render();
 }
 
-function applyFilters(){
-  const cls=document.getElementById("f-cls").value;
-  const sec=document.getElementById("f-sector").value;
-  const stg=document.getElementById("f-stage").value;
-  filtered=DEALS.filter(d=>{
-    if(cls!=="All"&&d.cls!==cls)return false;
-    if(sec!=="All"&&d.sector!==sec)return false;
-    if(stg!=="All"&&d.stage!==stg)return false;
+function clearFilter(col,e){
+  e.stopPropagation();
+  activeFilters[col]=null;
+  renderHeaders();
+  render();
+}
+
+function renderHeaders(){
+  ['sector','dmType','cls'].forEach(col=>{
+    const th=document.getElementById('th-'+col);
+    const labels={sector:'Sector',dmType:'DM type',cls:'Classification'};
+    const val=activeFilters[col];
+    if(val){
+      th.querySelector('.th-inner').innerHTML=`
+        <span class="th-label" style="color:#1a1a18">${labels[col]}</span>
+        <span class="filter-pip">${val}<span class="pip-x" onclick="clearFilter('${col}',event)">✕</span></span>
+      `;
+    } else {
+      th.querySelector('.th-inner').innerHTML=`<span class="th-label">${labels[col]}</span>`;
+    }
+  });
+}
+
+function getFiltered(){
+  return DEALS.filter(d=>{
+    if(activeFilters.sector&&d.sector!==activeFilters.sector)return false;
+    if(activeFilters.dmType&&d.dmType!==activeFilters.dmType)return false;
+    if(activeFilters.cls&&d.cls!==activeFilters.cls)return false;
     return true;
   });
-  openIdx=null;
-  render();
 }
 
 function toggle(i){openIdx=openIdx===i?null:i;render();}
 
 function render(){
+  const filtered=getFiltered();
   const tb=document.getElementById("tbody");
   tb.innerHTML="";
-  document.getElementById("count-note").textContent=filtered.length+" of "+DEALS.length+" deals";
 
   filtered.forEach((d,i)=>{
     const open=openIdx===i;
+    const dmBadge=d.dmType==="Corporate"
+      ?'<span class="dm-corp">Corporate</span>'
+      :'<span class="dm-angel">Individual angel</span>';
     const tr=document.createElement("tr");
     tr.className="data-row"+(open?" open":"");
     tr.innerHTML=`
@@ -190,7 +213,7 @@ function render(){
       <td class="muted">${d.stage}</td>
       <td class="muted">${d.date}</td>
       <td>${d.sizeFmt}</td>
-      <td class="muted">${d.isLead===null?"—":d.isLead?"Yes":"No"}</td>
+      <td>${dmBadge}</td>
       <td><span class="${badgeClass[d.cls]}">${d.cls}</span></td>
     `;
     tr.onclick=()=>toggle(i);
@@ -209,15 +232,17 @@ function render(){
               <div class="ds-item">Size: ${d.sizeFmt}</div>
               <div class="ds-item">Stage: ${d.stage}</div>
               <div class="ds-item">HQ: ${d.hq}</div>
-              <div class="ds-item">DM lead: ${d.isLead===null?"Unknown":d.isLead?"Yes":"No"}</div>
+              <div class="ds-item">Date: ${d.date}</div>
             </div>
             <div>
               <div class="ds-label">Co-investors</div>
               ${d.coInvestors.map(c=>`<div class="ds-item">· ${c}</div>`).join("")}
             </div>
             <div>
+              <div class="ds-label">DM connection</div>
+              <div class="ds-item" style="margin-bottom:10px">${d.dmConnection}</div>
               <div class="ds-label">Classification</div>
-              <div style="margin-bottom:8px"><span class="${badgeClass[d.cls]}">${d.cls}</span></div>
+              <div style="margin-bottom:6px"><span class="${badgeClass[d.cls]}">${d.cls}</span></div>
               <div class="ds-item">Confidence: <span class="${confCls[d.conf]}">${d.conf}</span></div>
             </div>
           </div>
@@ -230,20 +255,22 @@ function render(){
     }
   });
 
-  const cs=DEALS.filter(d=>d.cls==="Clearly Strategic").length;
-  const ls=DEALS.filter(d=>d.cls==="Likely Strategic").length;
-  const disclosed=DEALS.filter(d=>d.size);
-  const avg=disclosed.length?Math.round(disclosed.reduce((a,b)=>a+b.size,0)/disclosed.length):0;
-  document.getElementById("metrics").innerHTML=`
-    <div class="metric"><div class="metric-label">Total tracked</div><div class="metric-value">${DEALS.length}</div></div>
-    <div class="metric"><div class="metric-label">Clearly strategic</div><div class="metric-value" style="color:#791F1F">${cs}</div></div>
-    <div class="metric"><div class="metric-label">Likely strategic</div><div class="metric-value" style="color:#633806">${ls}</div></div>
-    <div class="metric"><div class="metric-label">Avg disclosed size</div><div class="metric-value">$${avg}M</div></div>
-  `;
+  renderMetrics();
 }
 
-buildSelect("f-sector",["All",...new Set(DEALS.map(d=>d.sector))].filter((v,i,a)=>i===0||a.indexOf(v)===i).slice(1).sort());
-buildSelect("f-stage",["All",...new Set(DEALS.map(d=>d.stage))].filter((v,i,a)=>i===0||a.indexOf(v)===i).slice(1).sort());
+function renderMetrics(){
+  const corp=DEALS.filter(d=>d.dmType==="Corporate").length;
+  const angel=DEALS.filter(d=>d.dmType==="Individual angel").length;
+  const cs=DEALS.filter(d=>d.cls==="Clearly Strategic").length;
+  document.getElementById("metrics").innerHTML=`
+    <div class="metric"><div class="metric-label">Total tracked</div><div class="metric-value">${DEALS.length}</div></div>
+    <div class="metric"><div class="metric-label">Corporate DM checks</div><div class="metric-value" style="color:#185FA5">${corp} <span style="font-size:0.95rem;color:#aaa">of ${DEALS.length}</span></div></div>
+    <div class="metric"><div class="metric-label">Clearly strategic</div><div class="metric-value" style="color:#791F1F">${cs}</div></div>
+  `;
+  document.getElementById("insight-box").innerHTML=
+    `<strong>Key finding:</strong> ${angel} of ${DEALS.length} tracked investments are individual DeepMind employee angels — not corporate Google DeepMind checks. Only ${corp} deals (Apptronik, AllScale) represent institutional capital deployment. This distinction is critical: employee angel activity reflects talent-network deal flow, not deliberate strategic positioning by Google DeepMind as an organization. Apptronik is the only deal that is unambiguously both corporate and strategic.`;
+}
+
 render();
 </script>
 </body>
